@@ -42,7 +42,7 @@ class BadgeVerifier:
             self.client = shared_db_client
             self.db = shared_db
             self._owns_connection = False  # Don't close shared connection
-            print("✅ KPI Validator using shared MongoDB connection")
+            print("✅ Badge Verifier using shared MongoDB connection")
         else:
             self.client = None
             self.db = None
@@ -63,9 +63,9 @@ class BadgeVerifier:
         try:
             self.client = AsyncIOMotorClient(self.mongo_uri)
             self.db = self.client[self.db_name]
-            print("✅ KPI Validator connected to MongoDB")
+            print("✅ Badge Verifier connected to MongoDB")
         except Exception as e:
-            print(f"❌ Error connecting to database: {e}")
+            print(f"❌ Badge Verifier Error connecting to database: {e}")
             raise
     
     # Disconnect from MongoDB and close the client connection.
@@ -79,7 +79,7 @@ class BadgeVerifier:
             self.client.close()
             self.client = None
             self.db = None
-            print("🔌 KPI Validator disconnected from MongoDB")
+            print("🔌 Badge Verifier disconnected from MongoDB")
 
     
     ############################################################################

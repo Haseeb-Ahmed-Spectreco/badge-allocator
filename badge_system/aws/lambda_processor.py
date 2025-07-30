@@ -53,7 +53,7 @@ class LambdaBadgeProcessor:
             self.client = shared_db_client
             self.db = shared_db
             self._owns_connection = False  # Don't close shared connection
-            print("✅ KPI Validator using shared MongoDB connection")
+            print("✅ Lambda Badge processor using shared MongoDB connection")
         else:
             self.client = None
             self.db = None
@@ -74,7 +74,7 @@ class LambdaBadgeProcessor:
             if  self._owns_connection:
                 self.client = AsyncIOMotorClient(self.mongo_uri)
                 self.db = self.client[self.db_name]
-                print("✅ KPI Validator connected to MongoDB")
+                print("✅ Lambda Badge processor connected to MongoDB")
             
             # Initialize HTTP client
             self.http_client = HttpClient(
@@ -109,10 +109,10 @@ class LambdaBadgeProcessor:
             )
             
             # Since we're passing shared connections, we don't need to call connect_to_db on each component
-            print("✅ Connected to MongoDB and initialized components with shared connection")
+            print("✅ Lambda Badge processor connected to MongoDB and initialized components with shared connection")
             
         except Exception as e:
-            print(f"❌ Error connecting to database: {e}")
+            print(f"❌ Lambda Badge processor Error connecting to database: {e}")
             raise
     
     def disconnect_from_db(self):
@@ -124,7 +124,7 @@ class LambdaBadgeProcessor:
                 self.client = None
                 self.db = None
                 
-            print("🔌 Disconnected from MongoDB and cleaned up components")
+            print("🔌Lambda Badge Processor Disconnected from MongoDB and cleaned up components")
         except Exception as e:
             print(f"❌ Error disconnecting: {e}")
     

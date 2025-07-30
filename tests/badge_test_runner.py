@@ -46,7 +46,7 @@ class DynamicBadgeTestRunner:
                 token = config_dict['TOKEN']
                 headers = {
                 'Authorization': f'{token}'
-            }
+                }
                 async with self.session.get(self.config.api_url, headers=headers) as response:
                     if response.status == 200:
                         data = await response.json()

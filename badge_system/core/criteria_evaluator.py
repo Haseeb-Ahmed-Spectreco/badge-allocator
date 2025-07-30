@@ -52,7 +52,7 @@ class CriteriaEvaluator:
             self.client = shared_db_client
             self.db = shared_db
             self._owns_connection = False  # Don't close shared connection
-            print("✅ KPI Validator using shared MongoDB connection")
+            print("✅ Criteria Evaluator using shared MongoDB connection")
         else:
             self.client = None
             self.db = None
@@ -72,14 +72,14 @@ class CriteriaEvaluator:
         try:
             self.client = AsyncIOMotorClient(self.mongo_uri)
             self.db = self.client[self.db_name]
-            print("✅ KPI Validator connected to MongoDB")
+            print("✅ Criteria Evaluator connected to MongoDB")
         except Exception as e:
-            print(f"❌ Error connecting to database: {e}")
+            print(f"❌Criteria Evaluator Error connecting to database: {e}")
             raise
     
     # Disconnect from MongoDB and close the client connection.
     def disconnect_from_db(self):
-        """Close MongoDB connection (only if we own the connection)."""
+        """Close MongoDB connection (only if we own the connection). """
         if not self._owns_connection:
             # Don't close shared connection
             return
@@ -88,7 +88,7 @@ class CriteriaEvaluator:
             self.client.close()
             self.client = None
             self.db = None
-            print("🔌 KPI Validator disconnected from MongoDB")
+            print("🔌 Criteria Evaluator disconnected from MongoDB")
 
     
     ############################################################################

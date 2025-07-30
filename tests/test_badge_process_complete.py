@@ -3,7 +3,7 @@ import os
 from unittest.mock import patch
 import pytest
 import asyncio
-from tests import ExecutionMode, Config, DynamicBadgeTestRunner
+from tests import ExecutionMode, Config, DynamicBadgeTestRunner, rich_loader
 
 import pytest_asyncio
 
@@ -76,10 +76,11 @@ class TestBadgeProcessorEfficient:
         )
         
         async with DynamicBadgeTestRunner(config) as runner:
-            summary = await runner.run_tests(
-                connected_badge_processor, 
-                ExecutionMode.CONCURRENT
-            )
+            async with rich_loader("Running SAMPLE badge processing..."):
+                summary = await runner.run_tests(
+                    connected_badge_processor,
+                    ExecutionMode.CONCURRENT
+                )
             assert summary['success'], f"Success rate too low: {summary['success_rate']:.2%}"
     
     @pytest.mark.integration
