@@ -3,7 +3,7 @@ from enum import Enum
 from dataclasses import dataclass
 from typing import Dict
 
-class TestMode(Enum):
+class ExecutionMode(Enum):
     """Different test execution modes"""
     FULL = "full"           # Test all pairs
     SAMPLE = "sample"       # Test a sample of pairs
@@ -12,7 +12,7 @@ class TestMode(Enum):
     SEQUENTIAL = "sequential" # Test one by one
 
 @dataclass
-class TestConfig:
+class Config:
     """Configuration for badge processing tests"""
     
     @classmethod

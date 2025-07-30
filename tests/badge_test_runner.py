@@ -1,5 +1,5 @@
 from typing import List, Dict, Any, Optional
-from tests import TestMode, TestConfig
+from tests import ExecutionMode, Config
 import aiohttp
 import time
 import asyncio
@@ -8,8 +8,8 @@ import asyncio
 class DynamicBadgeTestRunner:
     """Efficient test runner for dynamic company-site badge processing"""
     
-    def __init__(self, config: TestConfig = None):
-        self.config = config or TestConfig()
+    def __init__(self, config: Config = None):
+        self.config = config or Config()
         self.session: Optional[aiohttp.ClientSession] = None
         
     async def __aenter__(self):
@@ -77,7 +77,7 @@ class DynamicBadgeTestRunner:
         
         return []
     
-    async def run_tests(self, processor, mode: TestMode = TestMode.CONCURRENT) -> Dict[str, Any]:
+    async def run_tests(self, processor, mode: ExecutionMode = ExecutionMode.CONCURRENT) -> Dict[str, Any]:
         """Run badge processing tests with specified mode"""
         start_time = time.time()
         
@@ -87,7 +87,7 @@ class DynamicBadgeTestRunner:
             return {"success": False, "error": "No pairs found", "results": []}
         
         # Select pairs based on mode
-        if mode == TestMode.SAMPLE:
+        if mode == ExecutionMode.SAMPLE:
             test_pairs = all_pairs[:self.config.sample_size]
         else:
             test_pairs = all_pairs
@@ -95,11 +95,11 @@ class DynamicBadgeTestRunner:
         print(f"🎯 Running {mode.value} test mode with {len(test_pairs)} pairs")
         
         # Execute tests based on mode
-        if mode == TestMode.CONCURRENT:
+        if mode == ExecutionMode.CONCURRENT:
             results = await self._run_concurrent_tests(processor, test_pairs)
-        elif mode == TestMode.BATCH:
+        elif mode == ExecutionMode.BATCH:
             results = await self._run_batch_tests(processor, test_pairs)
-        elif mode == TestMode.SEQUENTIAL:
+        elif mode == ExecutionMode.SEQUENTIAL:
             results = await self._run_sequential_tests(processor, test_pairs)
         else:
             results = await self._run_concurrent_tests(processor, test_pairs)

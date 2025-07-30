@@ -3,7 +3,7 @@ import os
 from unittest.mock import patch
 import pytest
 import asyncio
-from tests import TestMode, TestConfig, DynamicBadgeTestRunner
+from tests import ExecutionMode, Config, DynamicBadgeTestRunner
 
 import pytest_asyncio
 
@@ -12,7 +12,7 @@ from badge_system.aws.lambda_processor import LambdaBadgeProcessor
 @pytest.fixture
 def test_config():
     """Fixture providing test configuration"""
-    return TestConfig.get_config()
+    return Config.get_config()
 
 @pytest.fixture
 def badge_processor(test_config):
@@ -69,7 +69,7 @@ class TestBadgeProcessorEfficient:
     @pytest.mark.asyncio
     async def test_badge_processing_concurrent(self, connected_badge_processor):
         """Test with high concurrency for speed"""
-        config = TestConfig(
+        config = Config(
             max_concurrent=10,
             min_success_rate=0.6,
             log_individual_results=False
@@ -78,7 +78,7 @@ class TestBadgeProcessorEfficient:
         async with DynamicBadgeTestRunner(config) as runner:
             summary = await runner.run_tests(
                 connected_badge_processor, 
-                TestMode.CONCURRENT
+                ExecutionMode.CONCURRENT
             )
             assert summary['success'], f"Success rate too low: {summary['success_rate']:.2%}"
     
@@ -86,7 +86,7 @@ class TestBadgeProcessorEfficient:
     @pytest.mark.asyncio
     async def test_badge_processing_sample(self, connected_badge_processor):
         """Test a sample for quick validation"""
-        config = TestConfig(
+        config = Config(
             sample_size=3,
             min_success_rate=0.5,
             log_individual_results=True
@@ -95,7 +95,7 @@ class TestBadgeProcessorEfficient:
         async with DynamicBadgeTestRunner(config) as runner:
             summary = await runner.run_tests(
                 connected_badge_processor,
-                TestMode.SAMPLE
+                ExecutionMode.SAMPLE
             )
             assert summary['successful'] > 0, "At least one test should pass"
     
@@ -103,7 +103,7 @@ class TestBadgeProcessorEfficient:
     @pytest.mark.asyncio
     async def test_badge_processing_batch(self, connected_badge_processor):
         """Test in batches for controlled resource usage"""
-        config = TestConfig(
+        config = Config(
             batch_size=2,
             delay_between_batches=0.3,
             min_success_rate=0.4
@@ -112,7 +112,7 @@ class TestBadgeProcessorEfficient:
         async with DynamicBadgeTestRunner(config) as runner:
             summary = await runner.run_tests(
                 connected_badge_processor,
-                TestMode.BATCH
+                ExecutionMode.BATCH
             )
             assert summary['success'], f"Batch testing failed: {summary['success_rate']:.2%}"
 
@@ -122,7 +122,7 @@ async def run_manual_test():
     # You would import your processor here
     # from your_module import connected_badge_processor
     
-    config = TestConfig(
+    config = Config(
         max_concurrent=3,
         sample_size=5,
         log_individual_results=True
@@ -139,7 +139,7 @@ async def run_manual_test():
     processor = MockProcessor()
     
     async with DynamicBadgeTestRunner(config) as runner:
-        summary = await runner.run_tests(processor, TestMode.SAMPLE)
+        summary = await runner.run_tests(processor, ExecutionMode.SAMPLE)
         
     print(f"Manual test completed: {summary['success']}")
     return summary
