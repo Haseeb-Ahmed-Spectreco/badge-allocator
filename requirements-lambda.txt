@@ -1,0 +1,8 @@
+# Minimal requirements for AWS Lambda deployment
+# Install with: pip install -r requirements-lambda.txt
+
+motor==3.7.1
+pymongo>=4.9,<5.0
+boto3>=1.26.0,<2.0  # Often pre-installed in Lambda, but safe to include
+python-dotenv>=1.0.0,<2.0
+aiohttp>=3.8.0,<4.0

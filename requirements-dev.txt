@@ -1,0 +1,21 @@
+# Development dependencies
+# Install with: pip install -r requirements-dev.txt
+
+# Include runtime requirements
+-r requirements.txt
+
+# Testing Framework
+pytest>=7.0.0,<8.0
+pytest-asyncio>=0.21.0,<1.0
+pytest-cov>=4.0.0,<5.0
+
+# AWS Mocking for Tests
+moto[all]>=4.2.0,<5.0
+
+# Code Quality Tools
+black>=22.0.0,<24.0
+flake8>=5.0.0,<7.0
+isort>=5.10.0,<6.0
+
+# Development Utilities
+ipython>=8.0.0,<9.0
