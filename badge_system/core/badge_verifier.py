@@ -280,6 +280,7 @@ class BadgeVerifier:
             awardable = await self.is_badge_awardable(criteria_data)
             badge_status = self.get_badge_status(status=criteria_status, awardable=awardable)
             
+            
             return {
                 "found": True,
                 "achieved": criteria_achieved,
@@ -288,7 +289,7 @@ class BadgeVerifier:
                 "awardable": awardable,
                 "evaluation_date": criteria_data.get("evaluation_date"),
                 "kpi_summary": criteria_data.get("kpi_summary", {}),                
-                "criteria_data_id": str(criteria_data["_id"])
+                "criteria_data_id": criteria_data["_id"]
             }
             
         except Exception as e:
@@ -393,6 +394,9 @@ class BadgeVerifier:
             criteria_status = verification_result.get("criteria_status", {})
             criteria_data_id = criteria_status.get("criteria_data_id")
             
+            print(f"==============> criteria data id: {criteria_data_id}")
+
+            
             # Prepare the document to save
             badge_data_doc = {
                 "company_id": str(company_id),
@@ -410,7 +414,8 @@ class BadgeVerifier:
             filter_criteria = {
                 "company_id": str(company_id),
                 "site_code": site_code,
-                "badge_id": badge_id
+                "badge_id": badge_id,
+                # "criteria_data_id": criteria_data_id
             }
             
             # Check if document exists

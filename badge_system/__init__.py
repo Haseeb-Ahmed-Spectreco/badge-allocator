@@ -19,5 +19,5 @@ from .exceptions import DBError, HTTPRequestError
 __all__ = [
     "BadgeVerifier", "CriteriaEvaluator", "KpiValidator",
     "LambdaBadgeProcessor", "AWSBadgeQueueClient", 
-    "HttpClient", "DBError", "HTTPRequestError"
+    "HttpClient", "DBError", "HTTPRequestError",
 ]

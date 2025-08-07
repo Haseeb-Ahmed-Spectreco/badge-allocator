@@ -5,8 +5,8 @@ Test Configuration File
 __version__ = "0.1.0"
 
 from .test_config import ExecutionMode, Config
-from .badge_test_runner import DynamicBadgeTestRunner
-from .test_loader import rich_loader
+from .badge_test_runner import BadgeReevaluationRunner
+from .test_loader import progress_tracker
 __all__ = [
-    "ExecutionMode", "Config", "DynamicBadgeTestRunner", "rich_loader"
+    "ExecutionMode", "Config", "BadgeReevaluationRunner", "progress_tracker"
 ]
