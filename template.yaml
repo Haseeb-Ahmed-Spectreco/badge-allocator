@@ -1,0 +1,203 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Badge Evaluation Queue System using SQS and Lambda
+
+Parameters:
+  MongoUri:
+    Type: String
+    Description: MongoDB connection URI
+    NoEcho: true # Hides parameter value in CloudFormation console for security
+
+  MongoDbName:
+    Type: String
+    Description: MongoDB database name
+    Default: ensogove # Default value if not provided during deployment
+
+  BaseUrl:
+    Type: String
+    Description: Base URL for API endpoints
+
+  RegionApiUrl:
+    Type: String
+    Description: Region API URL
+
+  Token:
+    Type: String
+    Description: Authentication token
+    NoEcho: true # Prevents token from being displayed in console/CLI
+
+Resources:
+  # SQS Queue for badge evaluation requests
+  BadgeEvaluationQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: badge-evaluation-queue # Human-readable queue name
+      VisibilityTimeoutSeconds: 900 # 15 minutes - time message is hidden after being received
+      MessageRetentionPeriod: 1209600 # 14 days - how long messages stay in queue
+      ReceiveMessageWaitTimeSeconds: 20 # ADDED: Enable long polling to reduce empty receives
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt BadgeEvaluationDLQ.Arn # Where failed messages go
+        maxReceiveCount: 3 # Number of receive attempts before sending to DLQ
+      Tags:
+        - Key: Purpose
+          Value: BadgeEvaluation
+
+  # Dead Letter Queue for failed messages
+  BadgeEvaluationDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: badge-evaluation-dlq # Name for the dead letter queue
+      MessageRetentionPeriod: 1209600 # 14 days retention for failed messages
+      Tags:
+        - Key: Purpose
+          Value: BadgeEvaluationDLQ
+
+  # Lambda function for processing badge evaluations
+  BadgeProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: badge-evaluation-processor # Function name in AWS console
+      CodeUri: ./src/ # FIXED: More specific path to Lambda code
+      Handler: scripts.aws_sqs_lambda_processor.lambda_handler # Entry point: file.function
+      Runtime: python3.11 # FIXED: Updated from python3.9 to more recent version
+      Timeout: 900 # 15 minutes - maximum execution time
+      MemorySize: 1024 # RAM allocated to function (affects CPU allocation too)
+      Role: !GetAtt BadgeProcessorRole.Arn # FIXED: Actually assign the IAM role
+      Environment:
+        Variables: # Environment variables available to Lambda function
+          MONGO_URI: !Ref MongoUri
+          MONGO_DB_NAME: !Ref MongoDbName
+          BASE_URL: !Ref BaseUrl
+          REGION_API_URL: !Ref RegionApiUrl
+          TOKEN: !Ref Token
+          SQS_QUEUE_URL: !Ref BadgeEvaluationQueue # Queue URL for the function
+          AWS_REGION: !Ref AWS::Region # Current AWS region
+      Events:
+        SQSEvent:
+          Type: SQS # Event source type
+          Properties:
+            Queue: !GetAtt BadgeEvaluationQueue.Arn # ARN of the queue to listen to
+            BatchSize: 1 # Process one message at a time (prevents partial failures)
+            MaximumBatchingWindowInSeconds: 5 # ADDED: Wait up to 5 seconds to batch messages
+      Layers:
+        - !Ref PythonDependenciesLayer # Include the dependencies layer
+      ReservedConcurrencyLimit: 10 # ADDED: Limit concurrent executions to prevent overwhelming downstream services
+      DeadLetterQueue: # ADDED: Function-level DLQ for Lambda failures
+        Type: SQS
+        TargetArn: !GetAtt BadgeEvaluationDLQ.Arn
+      Tags:
+        Purpose: BadgeEvaluation
+
+  # Lambda Layer for Python dependencies
+  PythonDependenciesLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: badge-evaluation-dependencies # Layer name
+      Description: Python dependencies for badge evaluation
+      ContentUri: ./layers/python-deps/ # FIXED: More specific path to layer contents
+      CompatibleRuntimes:
+        - python3.11 # FIXED: Match Lambda function runtime
+      RetentionPolicy: Delete # Delete old layer versions when stack is deleted
+
+  # IAM Role for Lambda function
+  BadgeProcessorRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AWS::StackName}-badge-processor-role" # ADDED: Explicit role name
+      AssumeRolePolicyDocument: # Trust policy - who can assume this role
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com # Only Lambda service can assume this role
+            Action: sts:AssumeRole
+      ManagedPolicyArns: # AWS-managed policies attached to this role
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole # Basic Lambda permissions
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole # SQS permissions
+      Policies: # ADDED: Custom inline policies for additional permissions
+        - PolicyName: MongoDBAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*"
+        - PolicyName: SQSAccess # Explicit SQS permissions
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueAttributes
+                  - sqs:SendMessage # For DLQ
+                Resource:
+                  - !GetAtt BadgeEvaluationQueue.Arn
+                  - !GetAtt BadgeEvaluationDLQ.Arn
+      Tags:
+        - Key: Purpose
+          Value: BadgeEvaluation
+
+  # CloudWatch Log Group for Lambda function
+  BadgeProcessorLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${BadgeProcessorFunction}" # Standard Lambda log group naming
+      RetentionInDays: 30 # Keep logs for 30 days
+      Tags: # ADDED: Tags for the log group
+        - Key: Purpose
+          Value: BadgeEvaluation
+
+  # ADDED: CloudWatch Alarm for monitoring DLQ
+  DLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AWS::StackName}-dlq-messages"
+      AlarmDescription: Alert when messages arrive in DLQ
+      MetricName: ApproximateNumberOfVisibleMessages
+      Namespace: AWS/SQS
+      Statistic: Sum
+      Period: 300 # 5 minutes
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt BadgeEvaluationDLQ.QueueName
+      TreatMissingData: notBreaching
+
+Outputs:
+  QueueUrl:
+    Description: URL of the SQS queue for sending messages
+    Value: !Ref BadgeEvaluationQueue # HTTP URL of the queue
+    Export:
+      Name: !Sub "${AWS::StackName}-QueueUrl" # Cross-stack reference name
+
+  QueueArn:
+    Description: ARN of the SQS queue
+    Value: !GetAtt BadgeEvaluationQueue.Arn # Amazon Resource Name
+    Export:
+      Name: !Sub "${AWS::StackName}-QueueArn"
+
+  DLQUrl:
+    Description: URL of the Dead Letter Queue for monitoring failed messages
+    Value: !Ref BadgeEvaluationDLQ
+    Export:
+      Name: !Sub "${AWS::StackName}-DLQUrl"
+
+  LambdaFunctionArn:
+    Description: ARN of the Lambda function
+    Value: !GetAtt BadgeProcessorFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-LambdaArn"
+
+  # ADDED: Additional useful outputs
+  RoleArn:
+    Description: ARN of the Lambda execution role
+    Value: !GetAtt BadgeProcessorRole.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-RoleArn"
